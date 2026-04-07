@@ -4,500 +4,602 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Sheriff Showdown</title>
-<link href="https://fonts.googleapis.com/css2?family=Rye&family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Rye&family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}
-:root{
---sand:#f4d5a0;--terracota:#c45a3c;--dark:#1a1209;--gold:#d4a853;--sky:#4a90b8;
---dust:rgba(210,170,110,0.3);--blood:#8b2020;
-}
-html,body{width:100%;height:100%;overflow:hidden;touch-action:manipulation}
-body{font-family:'Inter',sans-serif;background:var(--dark);color:#fff}
+html,body{width:100%;height:100%;overflow:hidden;touch-action:manipulation;background:#1a1209}
+body{font-family:'Inter',sans-serif}
+canvas{display:block;width:100%;height:100%}
 
-/* ========== SCREENS ========== */
-.screen{position:absolute;top:0;left:0;width:100%;height:100%;display:none;flex-direction:column;align-items:center;justify-content:center}
-.screen.active{display:flex}
+/* UI Overlays */
+.ui{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;display:flex;flex-direction:column}
+.ui *{pointer-events:auto}
 
-/* ========== TITLE SCREEN ========== */
-#title-screen{
-background:linear-gradient(180deg,#2a1a08 0%,#5c3310 30%,#c45a3c 60%,#f4d5a0 85%,#d4a853 100%);
-}
-.title-dust{position:absolute;bottom:0;width:100%;height:30%;background:linear-gradient(0deg,rgba(210,170,110,0.4),transparent);pointer-events:none}
-.title-logo{font-family:'Rye',serif;font-size:clamp(2rem,8vw,4rem);color:var(--gold);text-shadow:0 4px 0 #8b5e1a,0 6px 20px rgba(0,0,0,0.5);text-align:center;line-height:1.1;z-index:1}
-.title-sub{font-size:clamp(0.7rem,2.5vw,1rem);color:rgba(255,255,255,0.6);letter-spacing:3px;text-transform:uppercase;margin-top:8px;z-index:1}
+/* HUD */
+.hud{padding:12px 20px;display:flex;justify-content:space-between;align-items:flex-start;opacity:0;transition:opacity 0.5s}
+.hud.show{opacity:1}
+.hud-score{font-family:'Rye',serif;font-size:clamp(1.4rem,5vw,2.5rem);color:#d4a853;text-shadow:0 2px 8px rgba(0,0,0,0.5)}
+.hud-combo{font-size:0.7rem;color:#c45a3c;font-weight:900;letter-spacing:1px;min-height:1em}
+.hud-lives{display:flex;gap:3px;font-size:1.1rem}
+.hud-wave{font-size:0.6rem;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:2px}
 
-/* Sheriff idle on title */
-.sheriff-idle{width:120px;height:200px;margin:20px 0;z-index:1;position:relative}
-.sheriff-idle .body{position:absolute;bottom:0;width:100%;display:flex;flex-direction:column;align-items:center}
-.sheriff-idle .hat{width:60px;height:20px;background:#1a1209;border-radius:50%;position:relative;z-index:2}
-.sheriff-idle .hat::before{content:'';position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:30px;height:25px;background:#2a1a08;border-radius:4px 4px 0 0}
-.sheriff-idle .head{width:20px;height:20px;background:#1a1209;border-radius:50%;position:relative}
-.sheriff-idle .hair{position:absolute;top:-2px;left:-3px;right:-3px;height:10px;background:#0a0a0a;border-radius:50% 50% 0 0}
-.sheriff-idle .torso{width:3px;height:40px;background:#1a1209;position:relative}
-.sheriff-idle .star{position:absolute;top:5px;left:5px;font-size:8px;color:var(--gold)}
-.sheriff-idle .arms{position:absolute;top:5px;width:50px;height:3px;display:flex;justify-content:space-between}
-.sheriff-idle .arm{width:20px;height:3px;background:#1a1209;border-radius:2px}
-.sheriff-idle .arm.right{transform:rotate(20deg);transform-origin:left}
-.sheriff-idle .arm.left{transform:rotate(-20deg);transform-origin:right}
-.sheriff-idle .legs{display:flex;gap:8px;margin-top:0}
-.sheriff-idle .leg{width:3px;height:35px;background:#1a1209;border-radius:0 0 2px 2px}
-.sheriff-idle .leg.left{transform:rotate(-5deg)}
-.sheriff-idle .leg.right{transform:rotate(5deg)}
-.sheriff-idle .gun{position:absolute;right:-12px;top:8px;width:15px;height:6px;background:#333;border-radius:1px}
+/* Title overlay */
+.title-overlay{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10;transition:opacity 0.6s}
+.title-overlay.hidden{opacity:0;pointer-events:none}
+.t-name{font-family:'Rye',serif;font-size:clamp(2.2rem,9vw,4.5rem);color:#d4a853;text-shadow:0 4px 0 #6b3a0a,0 0 40px rgba(212,168,83,0.3);text-align:center;line-height:1}
+.t-sub{font-size:clamp(0.6rem,2vw,0.9rem);color:rgba(255,255,255,0.5);letter-spacing:4px;text-transform:uppercase;margin-top:8px}
+.t-play{margin-top:30px;padding:16px 55px;font-family:'Rye',serif;font-size:clamp(1rem,3.5vw,1.3rem);color:#1a1209;background:linear-gradient(180deg,#e8c36a,#d4a853);border:none;border-radius:50px;cursor:pointer;box-shadow:0 6px 0 #8b5e1a,0 0 30px rgba(212,168,83,0.2);letter-spacing:2px;transition:transform 0.1s}
+.t-play:active{transform:translateY(4px);box-shadow:0 2px 0 #8b5e1a}
+.t-best{margin-top:12px;font-size:0.7rem;color:rgba(255,255,255,0.25)}
 
-.btn-play{
-z-index:1;margin-top:20px;padding:18px 60px;font-family:'Rye',serif;font-size:clamp(1rem,4vw,1.5rem);
-color:var(--dark);background:linear-gradient(135deg,var(--gold),#e8c36a);border:none;border-radius:50px;
-cursor:pointer;box-shadow:0 6px 0 #8b5e1a,0 8px 30px rgba(0,0,0,0.4);
-transition:all 0.1s;letter-spacing:2px}
-.btn-play:active{transform:translateY(4px);box-shadow:0 2px 0 #8b5e1a}
+/* Tap zone */
+.tap-wrap{position:absolute;bottom:0;width:100%;height:38%;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.3s;pointer-events:none}
+.tap-wrap.show{opacity:1;pointer-events:auto}
+.tap-circle{width:min(28vw,120px);height:min(28vw,120px);border-radius:50%;background:radial-gradient(circle at 40% 35%,#e05a3a,#8b2020);border:3px solid #d4a853;box-shadow:0 0 40px rgba(196,90,60,0.4),inset 0 -4px 10px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform 0.04s}
+.tap-circle:active{transform:scale(0.88)}
+.tap-circle svg{width:40%;height:40%;fill:#d4a853;filter:drop-shadow(0 2px 3px rgba(0,0,0,0.3))}
 
-.title-scores{z-index:1;margin-top:15px;font-size:0.75rem;color:rgba(255,255,255,0.4)}
-
-/* ========== GAME SCREEN ========== */
-#game-screen{
-background:linear-gradient(180deg,var(--sky) 0%,#87CEEB 30%,#f5deb3 65%,var(--sand) 75%,#c2a06a 100%);
-padding:0;flex-direction:column;justify-content:flex-start}
-
-.game-hud{width:100%;padding:12px 20px;display:flex;justify-content:space-between;align-items:center;z-index:10}
-.hud-score{font-family:'Rye',serif;font-size:clamp(1.2rem,4vw,2rem);color:var(--gold);text-shadow:0 2px 4px rgba(0,0,0,0.3)}
-.hud-combo{font-size:0.7rem;color:var(--terracota);font-weight:900;letter-spacing:1px}
-.hud-lives{display:flex;gap:4px}
-.hud-life{font-size:1.2rem}
-.hud-wave{font-size:0.65rem;color:rgba(0,0,0,0.4);text-transform:uppercase;letter-spacing:2px}
-
-/* Arena */
-.arena{flex:1;width:100%;position:relative;display:flex;align-items:flex-end;justify-content:center;padding-bottom:10%}
-
-/* Stickmen in arena */
-.duelist{position:absolute;bottom:15%;display:flex;flex-direction:column;align-items:center}
-.duelist.sheriff{left:15%}
-.duelist.villain{right:15%;transform:scaleX(-1)}
-.duelist .d-hat{width:40px;height:14px;background:#1a1209;border-radius:50%}
-.duelist .d-hat::before{content:'';position:absolute;top:-14px;left:50%;transform:translateX(-50%);width:22px;height:18px;background:#2a1a08;border-radius:3px 3px 0 0}
-.duelist.villain .d-hat{background:var(--blood)}
-.duelist.villain .d-hat::before{background:#6b1515}
-.duelist .d-head{width:14px;height:14px;background:#1a1209;border-radius:50%}
-.duelist.villain .d-head{background:var(--blood)}
-.duelist .d-body{width:3px;height:30px;background:#1a1209}
-.duelist.villain .d-body{background:var(--blood)}
-.duelist .d-legs{display:flex;gap:6px}
-.duelist .d-leg{width:3px;height:25px;background:#1a1209}
-.duelist.villain .d-leg{background:var(--blood)}
-.duelist .d-arm-gun{position:absolute;top:34px;width:25px;height:3px;background:#1a1209}
-.duelist.sheriff .d-arm-gun{right:-25px}
-.duelist.villain .d-arm-gun{left:-25px;background:var(--blood)}
-.duelist .d-gun{position:absolute;top:-3px;right:-10px;width:12px;height:5px;background:#444;border-radius:1px}
-
-/* Countdown */
-.countdown{position:absolute;top:30%;left:50%;transform:translateX(-50%);font-family:'Rye',serif;font-size:clamp(3rem,12vw,6rem);color:var(--gold);text-shadow:0 4px 10px rgba(0,0,0,0.3);z-index:20;opacity:0;transition:opacity 0.2s}
-.countdown.show{opacity:1}
-.countdown.draw{color:var(--terracota);font-size:clamp(3.5rem,14vw,7rem)}
-
-/* Tug of war bar */
-.tug-container{position:absolute;bottom:30%;left:50%;transform:translateX(-50%);width:80%;max-width:350px;z-index:10}
-.tug-bar{width:100%;height:16px;background:rgba(0,0,0,0.15);border-radius:10px;overflow:hidden;position:relative;border:2px solid rgba(0,0,0,0.1)}
-.tug-fill{position:absolute;top:0;left:0;height:100%;width:50%;background:linear-gradient(90deg,var(--gold),var(--terracota));border-radius:8px;transition:width 0.05s}
-.tug-center{position:absolute;top:-4px;left:50%;transform:translateX(-50%);width:3px;height:24px;background:rgba(0,0,0,0.3);border-radius:2px}
-.tug-label-l,.tug-label-r{position:absolute;top:-18px;font-size:0.55rem;font-weight:900;color:rgba(0,0,0,0.3);text-transform:uppercase;letter-spacing:1px}
-.tug-label-l{left:0}
-.tug-label-r{right:0}
-
-/* TAP ZONE */
-.tap-zone{position:absolute;bottom:0;width:100%;height:35%;z-index:30;display:none;align-items:center;justify-content:center;background:linear-gradient(0deg,rgba(26,18,9,0.6),transparent)}
-.tap-zone.active{display:flex}
-.tap-btn{width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,var(--terracota),#8b2020);border:4px solid var(--gold);box-shadow:0 0 30px rgba(196,90,60,0.5),0 8px 0 #6b1515;display:flex;align-items:center;justify-content:center;font-family:'Rye',serif;font-size:1rem;color:var(--gold);cursor:pointer;transition:transform 0.05s}
-.tap-btn:active{transform:scale(0.92);box-shadow:0 0 15px rgba(196,90,60,0.3),0 2px 0 #6b1515}
-.tap-btn .tap-icon{font-size:2rem}
-
-/* Screen shake */
-.shake{animation:shake 0.1s}
-@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
-
-/* Capture animation */
-.capture-flash{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(212,168,83,0.3);z-index:50;opacity:0;pointer-events:none;transition:opacity 0.1s}
-.capture-flash.active{opacity:1}
-
-/* Float score */
-.float-score{position:absolute;font-family:'Rye',serif;font-size:1.5rem;color:var(--gold);text-shadow:0 2px 4px rgba(0,0,0,0.3);pointer-events:none;z-index:40;animation:floatUp 1s forwards}
-@keyframes floatUp{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-80px)}}
-
-/* ========== GAME OVER ========== */
-#gameover-screen{
-background:linear-gradient(180deg,#1a1209 0%,#2a1a08 40%,#3d2410 100%)}
-.go-title{font-family:'Rye',serif;font-size:clamp(1.8rem,7vw,3rem);color:var(--terracota);text-shadow:0 3px 0 #4a1010;margin-bottom:5px}
-.go-score{font-family:'Rye',serif;font-size:clamp(3rem,12vw,5rem);color:var(--gold);text-shadow:0 4px 0 #8b5e1a}
-.go-label{font-size:0.7rem;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:3px;margin-bottom:5px}
-.go-stats{display:flex;gap:30px;margin:20px 0}
-.go-stat{text-align:center}
-.go-stat-val{font-family:'Rye',serif;font-size:1.5rem;color:var(--gold)}
-.go-stat-label{font-size:0.6rem;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:1px}
-.go-best{font-size:0.8rem;color:var(--gold);margin:10px 0}
-.btn-retry{padding:16px 50px;font-family:'Rye',serif;font-size:1.1rem;color:var(--dark);background:linear-gradient(135deg,var(--gold),#e8c36a);border:none;border-radius:50px;cursor:pointer;box-shadow:0 5px 0 #8b5e1a;margin-top:15px;letter-spacing:2px}
-.btn-retry:active{transform:translateY(3px);box-shadow:0 2px 0 #8b5e1a}
-.btn-share{margin-top:10px;padding:10px 30px;background:transparent;border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.5);border-radius:30px;font-size:0.75rem;cursor:pointer;font-family:'Inter',sans-serif}
-
-/* Leaderboard mini */
-.leaderboard{margin-top:15px;width:80%;max-width:300px}
-.lb-title{font-size:0.6rem;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:2px;text-align:center;margin-bottom:8px}
-.lb-row{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:0.75rem}
-.lb-rank{color:var(--gold);width:20px}
-.lb-name{color:rgba(255,255,255,0.6);flex:1}
-.lb-pts{color:var(--gold);font-weight:700}
+/* Game over */
+.go-overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(10,8,4,0.92);display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.5s;z-index:20}
+.go-overlay.show{opacity:1;pointer-events:auto}
+.go-t{font-family:'Rye',serif;color:#c45a3c;font-size:clamp(1.5rem,6vw,2.5rem);text-shadow:0 3px 0 #3a0e0e}
+.go-label{font-size:0.6rem;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:3px;margin-top:15px}
+.go-score{font-family:'Rye',serif;font-size:clamp(3rem,13vw,5.5rem);color:#d4a853;text-shadow:0 4px 0 #8b5e1a,0 0 40px rgba(212,168,83,0.2)}
+.go-stats{display:flex;gap:25px;margin-top:15px}
+.go-sv{font-family:'Rye',serif;font-size:1.3rem;color:#d4a853}
+.go-sl{font-size:0.55rem;color:rgba(255,255,255,0.25);text-transform:uppercase;letter-spacing:1px;text-align:center}
+.go-best{font-size:0.75rem;color:#d4a853;margin-top:10px}
+.go-retry{margin-top:20px;padding:14px 45px;font-family:'Rye',serif;font-size:1rem;color:#1a1209;background:linear-gradient(180deg,#e8c36a,#d4a853);border:none;border-radius:50px;cursor:pointer;box-shadow:0 5px 0 #8b5e1a;letter-spacing:2px}
+.go-retry:active{transform:translateY(3px);box-shadow:0 2px 0 #8b5e1a}
+.go-share{margin-top:8px;padding:8px 25px;background:none;border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.4);border-radius:25px;font-size:0.7rem;cursor:pointer}
+.lb{margin-top:12px;width:75%;max-width:280px}
+.lb-t{font-size:0.55rem;color:rgba(255,255,255,0.2);text-transform:uppercase;letter-spacing:2px;text-align:center;margin-bottom:6px}
+.lb-r{display:flex;justify-content:space-between;padding:3px 0;font-size:0.7rem;border-bottom:1px solid rgba(255,255,255,0.04)}
+.lb-rk{color:#d4a853;width:18px}
+.lb-n{color:rgba(255,255,255,0.45);flex:1}
+.lb-p{color:#d4a853;font-weight:700}
 </style>
 </head>
 <body>
 
-<!-- TITLE -->
-<div id="title-screen" class="screen active">
-  <div class="title-dust"></div>
-  <div class="title-logo">SHERIFF<br>SHOWDOWN</div>
-  <div class="title-sub">Captura a los villanos</div>
-  <div class="sheriff-idle">
-    <div class="body">
-      <div class="hat"></div>
-      <div class="head"><div class="hair"></div></div>
-      <div class="torso">
-        <div class="star">★</div>
-        <div class="arms">
-          <div class="arm left"></div>
-          <div class="arm right"></div>
-        </div>
-        <div class="gun"></div>
-      </div>
-      <div class="legs">
-        <div class="leg left"></div>
-        <div class="leg right"></div>
-      </div>
-    </div>
-  </div>
-  <button class="btn-play" onclick="startGame()">JUGAR</button>
-  <div class="title-scores" id="title-best"></div>
-</div>
+<canvas id="c"></canvas>
 
-<!-- GAME -->
-<div id="game-screen" class="screen">
-  <div class="game-hud">
-    <div>
-      <div class="hud-score" id="hud-score">0</div>
-      <div class="hud-combo" id="hud-combo"></div>
-    </div>
-    <div style="text-align:center">
-      <div class="hud-wave" id="hud-wave">Oleada 1</div>
-    </div>
-    <div style="text-align:right">
-      <div class="hud-lives" id="hud-lives"></div>
-    </div>
-  </div>
-  
-  <div class="arena" id="arena">
-    <div class="duelist sheriff" id="sheriff">
-      <div class="d-hat"></div>
-      <div class="d-head"></div>
-      <div class="d-body">
-        <div class="d-arm-gun"><div class="d-gun"></div></div>
-      </div>
-      <div class="d-legs"><div class="d-leg"></div><div class="d-leg"></div></div>
-    </div>
-    <div class="duelist villain" id="villain">
-      <div class="d-hat"></div>
-      <div class="d-head"></div>
-      <div class="d-body">
-        <div class="d-arm-gun"><div class="d-gun"></div></div>
-      </div>
-      <div class="d-legs"><div class="d-leg"></div><div class="d-leg"></div></div>
-    </div>
-    
-    <div class="countdown" id="countdown"></div>
-    
-    <div class="tug-container" id="tug-container" style="display:none">
-      <div class="tug-label-l">Sheriff</div>
-      <div class="tug-label-r">Villano</div>
-      <div class="tug-bar">
-        <div class="tug-fill" id="tug-fill"></div>
-        <div class="tug-center"></div>
-      </div>
-    </div>
-    
-    <div class="capture-flash" id="capture-flash"></div>
-  </div>
-  
-  <div class="tap-zone" id="tap-zone">
-    <div class="tap-btn" id="tap-btn"><span class="tap-icon">🔫</span></div>
+<div class="ui">
+  <div class="hud" id="hud">
+    <div><div class="hud-score" id="hs">0</div><div class="hud-combo" id="hc"></div></div>
+    <div style="text-align:center"><div class="hud-wave" id="hw">Oleada 1</div></div>
+    <div style="text-align:right"><div class="hud-lives" id="hl"></div></div>
   </div>
 </div>
 
-<!-- GAME OVER -->
-<div id="gameover-screen" class="screen">
-  <div class="go-title">Fin de turno</div>
+<div class="title-overlay" id="tov">
+  <div class="t-name">SHERIFF<br>SHOWDOWN</div>
+  <div class="t-sub">Captura a los villanos</div>
+  <button class="t-play" id="tplay">JUGAR</button>
+  <div class="t-best" id="tbest"></div>
+</div>
+
+<div class="tap-wrap" id="tw">
+  <div class="tap-circle" id="tbtn">
+    <svg viewBox="0 0 24 24"><path d="M7 5h10l1.5 3H22v2h-1l-1.5 9H4.5L3 10H2V8h3.5L7 5zm1.5 2l-1 2h9l-1-2h-7zM12 18a3 3 0 100-6 3 3 0 000 6z"/></svg>
+  </div>
+</div>
+
+<div class="go-overlay" id="gov">
+  <div class="go-t">Fin de turno</div>
   <div class="go-label">Puntuacion</div>
-  <div class="go-score" id="go-score">0</div>
+  <div class="go-score" id="gs">0</div>
   <div class="go-stats">
-    <div class="go-stat"><div class="go-stat-val" id="go-captures">0</div><div class="go-stat-label">Capturas</div></div>
-    <div class="go-stat"><div class="go-stat-val" id="go-max-combo">0</div><div class="go-stat-label">Max Combo</div></div>
-    <div class="go-stat"><div class="go-stat-val" id="go-wave">1</div><div class="go-stat-label">Oleada</div></div>
+    <div><div class="go-sv" id="gc">0</div><div class="go-sl">Capturas</div></div>
+    <div><div class="go-sv" id="gm">0</div><div class="go-sl">Max Combo</div></div>
+    <div><div class="go-sv" id="gw">1</div><div class="go-sl">Oleada</div></div>
   </div>
-  <div class="go-best" id="go-best"></div>
-  <button class="btn-retry" onclick="startGame()">DE NUEVO</button>
-  <button class="btn-share" onclick="shareScore()">Compartir</button>
-  <div class="leaderboard" id="leaderboard"></div>
+  <div class="go-best" id="gb"></div>
+  <button class="go-retry" onclick="startGame()">DE NUEVO</button>
+  <button class="go-share" onclick="shareScore()">Compartir</button>
+  <div class="lb" id="lb"></div>
 </div>
 
 <script>
-// ========== CONFIG ==========
-const SUPABASE_URL = 'https://fdqfqhkrjqzqbjoiruzm.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZkcWZxaGtyanF6cWJqb2lydXptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1MTk0MjgsImV4cCI6MjA5MTA5NTQyOH0.Rb-pkySruLQpi71sTHPX5n-EKDmcb3sSlZ0V74M--T8';
-const DB_READY = true;
+// ========== CANVAS SETUP ==========
+const C = document.getElementById('c');
+const X = C.getContext('2d');
+let W, H, DPR;
 
-// ========== STATE ==========
-let score = 0;
-let lives = 3;
-let combo = 0;
-let maxCombo = 0;
-let captures = 0;
-let wave = 1;
-let tugPos = 50; // 0=villain wins, 100=sheriff wins
-let villainSpeed = 0.3;
-let gameActive = false;
-let tugInterval = null;
-let villainInterval = null;
-let bestScore = parseInt(localStorage.getItem('ss_best') || '0');
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth; H = window.innerHeight;
+  C.width = W * DPR; C.height = H * DPR;
+  X.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+window.addEventListener('resize', resize);
+resize();
 
-// Villain types
-const VILLAINS = [
-  { name: 'Bandido', speed: 0.3, color: '#8b2020' },
-  { name: 'Forajido', speed: 0.5, color: '#6b4400' },
-  { name: 'Dinamitero', speed: 0.7, color: '#333' },
-  { name: 'El Jefe', speed: 1.0, color: '#1a1a1a' },
-];
+// ========== SUPABASE ==========
+const SB_URL = 'https://fdqfqhkrjqzqbjoiruzm.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZkcWZxaGtyanF6cWJqb2lydXptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1MTk0MjgsImV4cCI6MjA5MTA5NTQyOH0.Rb-pkySruLQpi71sTHPX5n-EKDmcb3sSlZ0V74M--T8';
 
-// ========== SCREENS ==========
-function showScreen(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
+// ========== AUDIO ==========
+const AC = new (window.AudioContext || window.webkitAudioContext)();
+function playTone(freq, dur, type='square', vol=0.15) {
+  const o = AC.createOscillator(), g = AC.createGain();
+  o.type = type; o.frequency.value = freq;
+  g.gain.setValueAtTime(vol, AC.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + dur);
+  o.connect(g); g.connect(AC.destination);
+  o.start(); o.stop(AC.currentTime + dur);
+}
+function sfxTap() { playTone(200 + Math.random()*100, 0.05, 'square', 0.08); }
+function sfxCountdown() { playTone(440, 0.15, 'sine', 0.12); }
+function sfxDraw() { playTone(880, 0.3, 'sawtooth', 0.15); }
+function sfxCapture() { playTone(523, 0.1); setTimeout(()=>playTone(659, 0.1), 80); setTimeout(()=>playTone(784, 0.2), 160); }
+function sfxLose() { playTone(200, 0.3, 'sawtooth', 0.12); setTimeout(()=>playTone(150, 0.4, 'sawtooth', 0.1), 200); }
+
+// ========== PARTICLES ==========
+let particles = [];
+function spawnDust(x, y, n=8) {
+  for (let i = 0; i < n; i++) {
+    particles.push({
+      x, y, vx: (Math.random()-0.5)*3, vy: -Math.random()*2-1,
+      life: 1, size: Math.random()*4+2, color: `rgba(${180+Math.random()*40},${150+Math.random()*30},${100+Math.random()*20},`
+    });
+  }
+}
+function spawnGold(x, y) {
+  for (let i = 0; i < 15; i++) {
+    const a = Math.random() * Math.PI * 2;
+    particles.push({
+      x, y, vx: Math.cos(a)*(Math.random()*5+2), vy: Math.sin(a)*(Math.random()*5+2)-3,
+      life: 1, size: Math.random()*3+1, color: `rgba(212,168,83,`
+    });
+  }
+}
+function updateParticles() {
+  particles = particles.filter(p => {
+    p.x += p.vx; p.y += p.vy; p.vy += 0.08; p.life -= 0.02;
+    if (p.life <= 0) return false;
+    X.beginPath(); X.arc(p.x, p.y, p.size * p.life, 0, Math.PI*2);
+    X.fillStyle = p.color + (p.life * 0.7) + ')';
+    X.fill();
+    return true;
+  });
 }
 
-// ========== GAME START ==========
+// ========== STICKMAN ==========
+function drawStick(cx, cy, scale, color, hatColor, facingRight, breathOffset=0, armAngle=0) {
+  const s = scale;
+  const dir = facingRight ? 1 : -1;
+  const bo = Math.sin(breathOffset) * 2;
+  
+  X.save();
+  X.translate(cx, cy);
+  
+  // Shadow on ground
+  X.beginPath();
+  X.ellipse(0, s*50, s*20, s*5, 0, 0, Math.PI*2);
+  X.fillStyle = 'rgba(0,0,0,0.15)';
+  X.fill();
+  
+  // Legs
+  X.strokeStyle = color; X.lineWidth = s*3.5; X.lineCap = 'round';
+  X.beginPath(); X.moveTo(0, s*20); X.lineTo(-s*8, s*48); X.stroke();
+  X.beginPath(); X.moveTo(0, s*20); X.lineTo(s*8, s*48); X.stroke();
+  
+  // Boots
+  X.fillStyle = '#2a1a08';
+  X.fillRect(-s*11, s*45, s*8, s*5);
+  X.fillRect(s*5, s*45, s*8, s*5);
+  
+  // Body
+  X.strokeStyle = color; X.lineWidth = s*3.5;
+  X.beginPath(); X.moveTo(0, s*(-15)+bo); X.lineTo(0, s*22); X.stroke();
+  
+  // Arms
+  X.lineWidth = s*3;
+  // Back arm
+  X.beginPath(); X.moveTo(0, s*(-5)+bo);
+  X.lineTo(-dir*s*18, s*(5+armAngle*3)+bo); X.stroke();
+  // Gun arm
+  X.beginPath(); X.moveTo(0, s*(-5)+bo);
+  X.lineTo(dir*s*20, s*(-2+armAngle*-5)+bo); X.stroke();
+  
+  // Gun
+  X.fillStyle = '#444';
+  const gx = dir*s*20, gy = s*(-2+armAngle*-5)+bo;
+  X.save(); X.translate(gx, gy); X.rotate(dir*-0.3);
+  X.fillRect(0, -s*2, dir*s*12, s*3);
+  X.fillRect(dir*s*2, s*1, s*3, s*5); // handle
+  X.restore();
+  
+  // Head
+  X.beginPath(); X.arc(0, s*(-22)+bo, s*10, 0, Math.PI*2);
+  X.fillStyle = color; X.fill();
+  
+  // Hair (black, visible under hat)
+  X.beginPath(); X.arc(0, s*(-22)+bo, s*10, Math.PI*0.8, Math.PI*0.2, true);
+  X.fillStyle = '#0a0a0a'; X.fill();
+  
+  // Eyes
+  const eyeY = s*(-23)+bo;
+  X.fillStyle = '#fff';
+  X.beginPath(); X.arc(dir*s*3.5, eyeY, s*2.5, 0, Math.PI*2); X.fill();
+  X.fillStyle = '#111';
+  X.beginPath(); X.arc(dir*s*4, eyeY, s*1.3, 0, Math.PI*2); X.fill();
+  
+  // Hat
+  X.fillStyle = hatColor;
+  // Brim
+  X.beginPath(); X.ellipse(0, s*(-30)+bo, s*16, s*4, 0, 0, Math.PI*2); X.fill();
+  // Crown
+  X.fillRect(-s*9, s*(-44)+bo, s*18, s*15);
+  X.beginPath(); X.arc(0, s*(-44)+bo, s*9, Math.PI, 0); X.fill();
+  
+  // Star badge (sheriff only)
+  if (hatColor === '#2a1a08') {
+    X.fillStyle = '#d4a853';
+    X.font = `${s*10}px serif`;
+    X.textAlign = 'center';
+    X.fillText('★', 0, s*(-3)+bo);
+  }
+  
+  X.restore();
+}
+
+// ========== GAME STATE ==========
+let state = 'title'; // title | countdown | duel | capture | escape | gameover
+let score=0, lives=3, combo=0, maxCombo=0, captures=0, wave=1;
+let tugPos=50, villainPower=0.3;
+let countdownStep=0, countdownTimer=0;
+let animTimer=0, shakeX=0, shakeY=0, shakeDecay=0;
+let captureAnim=0, escapeAnim=0;
+let flashAlpha=0;
+let breathPhase=0;
+let bestScore = parseInt(localStorage.getItem('ss_best')||'0');
+let floats = [];
+
+// ========== GAME LOOP ==========
+let lastTime = 0;
+function loop(time) {
+  const dt = Math.min((time - lastTime) / 1000, 0.05);
+  lastTime = time;
+  breathPhase += dt * 3;
+  
+  // Shake decay
+  if (shakeDecay > 0) {
+    shakeX = (Math.random()-0.5) * shakeDecay * 8;
+    shakeY = (Math.random()-0.5) * shakeDecay * 4;
+    shakeDecay = Math.max(0, shakeDecay - dt * 8);
+  } else { shakeX = 0; shakeY = 0; }
+  
+  // Flash decay
+  flashAlpha = Math.max(0, flashAlpha - dt * 4);
+  
+  update(dt);
+  render();
+  requestAnimationFrame(loop);
+}
+
+function update(dt) {
+  if (state === 'countdown') {
+    countdownTimer -= dt;
+    if (countdownTimer <= 0) {
+      countdownStep++;
+      if (countdownStep <= 3) {
+        countdownTimer = 0.7;
+        sfxCountdown();
+        if (navigator.vibrate) navigator.vibrate(30);
+      } else if (countdownStep === 4) {
+        countdownTimer = 0.5;
+        sfxDraw();
+        if (navigator.vibrate) navigator.vibrate(80);
+      } else {
+        state = 'duel';
+        tugPos = 50;
+        document.getElementById('tw').classList.add('show');
+      }
+    }
+  }
+  
+  if (state === 'duel') {
+    // Villain pushes
+    const vSpeed = villainPower + wave * 0.04;
+    tugPos -= vSpeed * dt * 60;
+    if (Math.random() < 0.03 * wave) tugPos -= 1.5; // random bursts
+    tugPos = Math.max(0, Math.min(100, tugPos));
+    
+    // Ground dust while dueling
+    if (Math.random() < 0.1) spawnDust(W*0.2 + Math.random()*20, H*0.72, 2);
+    if (Math.random() < 0.1) spawnDust(W*0.8 - Math.random()*20, H*0.72, 2);
+    
+    if (tugPos >= 92) { winDuel(); }
+    if (tugPos <= 8) { loseDuel(); }
+  }
+  
+  if (state === 'capture') {
+    captureAnim += dt;
+    if (captureAnim > 1.2) nextRound();
+  }
+  if (state === 'escape') {
+    escapeAnim += dt;
+    if (escapeAnim > 1.2) {
+      if (lives <= 0) gameOver();
+      else nextRound();
+    }
+  }
+  
+  // Float scores
+  floats = floats.filter(f => { f.y -= dt*80; f.alpha -= dt; return f.alpha > 0; });
+}
+
+// ========== RENDER ==========
+function render() {
+  X.save();
+  X.translate(shakeX, shakeY);
+  
+  // Sky gradient
+  const sky = X.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, '#1a3a5c');
+  sky.addColorStop(0.25, '#4a7a98');
+  sky.addColorStop(0.45, '#c89050');
+  sky.addColorStop(0.55, '#d4a060');
+  sky.addColorStop(0.65, '#c2936a');
+  sky.addColorStop(1, '#a07850');
+  X.fillStyle = sky;
+  X.fillRect(0, 0, W, H);
+  
+  // Sun
+  const sunGrd = X.createRadialGradient(W*0.75, H*0.35, 0, W*0.75, H*0.35, W*0.2);
+  sunGrd.addColorStop(0, 'rgba(255,220,130,0.5)');
+  sunGrd.addColorStop(0.5, 'rgba(255,180,80,0.15)');
+  sunGrd.addColorStop(1, 'transparent');
+  X.fillStyle = sunGrd;
+  X.fillRect(0, 0, W, H);
+  
+  // Ground
+  X.fillStyle = '#8b6a40';
+  X.fillRect(0, H*0.7, W, H*0.3);
+  X.fillStyle = '#7a5c38';
+  X.fillRect(0, H*0.7, W, 3);
+  
+  // Distant mountains
+  X.fillStyle = 'rgba(60,40,25,0.3)';
+  X.beginPath(); X.moveTo(0, H*0.65);
+  for (let i = 0; i <= W; i += W/8) {
+    X.lineTo(i, H*0.65 - Math.sin(i*0.005)*H*0.08 - Math.sin(i*0.002)*H*0.05);
+  }
+  X.lineTo(W, H*0.7); X.lineTo(0, H*0.7); X.fill();
+  
+  // Cacti silhouettes
+  X.fillStyle = 'rgba(40,30,15,0.25)';
+  drawCactus(W*0.08, H*0.68, 0.5);
+  drawCactus(W*0.92, H*0.67, 0.6);
+  drawCactus(W*0.45, H*0.66, 0.35);
+  
+  const sheriffX = W * 0.22;
+  const villainX = W * 0.78;
+  const groundY = H * 0.72;
+  const stickScale = Math.min(W, H) / 350;
+  
+  // Draw characters
+  if (state !== 'title') {
+    const sheriffArm = state === 'duel' ? Math.sin(breathPhase*8)*0.3 : 0;
+    const villainArm = state === 'duel' ? Math.sin(breathPhase*6+1)*0.3 : 0;
+    
+    drawStick(sheriffX, groundY, stickScale, '#1a1209', '#2a1a08', true, breathPhase, sheriffArm);
+    
+    if (state !== 'capture' || captureAnim < 0.5) {
+      drawStick(villainX, groundY, stickScale, '#6b1515', '#4a0e0e', false, breathPhase*1.1+0.5, villainArm);
+    }
+  }
+  
+  // Tug of war bar
+  if (state === 'duel') {
+    const barW = W * 0.65;
+    const barH = 14;
+    const barX = (W - barW) / 2;
+    const barY = H * 0.58;
+    
+    // Bar bg
+    X.fillStyle = 'rgba(0,0,0,0.2)';
+    X.beginPath(); X.roundRect(barX, barY, barW, barH, 7); X.fill();
+    
+    // Fill
+    const fillW = barW * (tugPos / 100);
+    const barGrd = X.createLinearGradient(barX, 0, barX+barW, 0);
+    barGrd.addColorStop(0, '#d4a853');
+    barGrd.addColorStop(0.5, '#e8c36a');
+    barGrd.addColorStop(1, '#c45a3c');
+    X.fillStyle = barGrd;
+    X.beginPath(); X.roundRect(barX, barY, fillW, barH, 7); X.fill();
+    
+    // Center line
+    X.fillStyle = 'rgba(255,255,255,0.3)';
+    X.fillRect(barX + barW/2 - 1, barY - 3, 2, barH + 6);
+    
+    // Labels
+    X.font = `600 ${9}px Inter`;
+    X.fillStyle = 'rgba(255,255,255,0.3)';
+    X.textAlign = 'left'; X.fillText('SHERIFF', barX, barY - 6);
+    X.textAlign = 'right'; X.fillText('VILLANO', barX + barW, barY - 6);
+  }
+  
+  // Countdown
+  if (state === 'countdown') {
+    let text = '';
+    if (countdownStep <= 3) text = String(4 - countdownStep);
+    else if (countdownStep === 4) text = 'DRAW!';
+    
+    if (text) {
+      const size = countdownStep === 4 ? Math.min(W*0.18, 90) : Math.min(W*0.15, 75);
+      X.font = `${size}px Rye`;
+      X.textAlign = 'center';
+      X.fillStyle = countdownStep === 4 ? '#c45a3c' : '#d4a853';
+      X.shadowColor = 'rgba(0,0,0,0.4)';
+      X.shadowBlur = 15;
+      const pulse = 1 + Math.sin(countdownTimer * Math.PI) * 0.1;
+      X.save();
+      X.translate(W/2, H*0.35);
+      X.scale(pulse, pulse);
+      X.fillText(text, 0, 0);
+      X.restore();
+      X.shadowBlur = 0;
+    }
+  }
+  
+  // Capture text
+  if (state === 'capture' && captureAnim < 1) {
+    X.font = `${Math.min(W*0.1, 50)}px Rye`;
+    X.textAlign = 'center';
+    X.fillStyle = `rgba(212,168,83,${1-captureAnim})`;
+    X.fillText('CAPTURADO!', W/2, H*0.38 - captureAnim*40);
+  }
+  if (state === 'escape' && escapeAnim < 1) {
+    X.font = `${Math.min(W*0.08, 40)}px Rye`;
+    X.textAlign = 'center';
+    X.fillStyle = `rgba(196,90,60,${1-escapeAnim})`;
+    X.fillText('ESCAPO...', W/2, H*0.38 - escapeAnim*30);
+  }
+  
+  // Particles
+  updateParticles();
+  
+  // Float scores
+  floats.forEach(f => {
+    X.font = `700 ${20}px Rye`;
+    X.textAlign = 'center';
+    X.fillStyle = `rgba(212,168,83,${f.alpha})`;
+    X.fillText(f.text, f.x, f.y);
+  });
+  
+  // Flash overlay
+  if (flashAlpha > 0) {
+    X.fillStyle = `rgba(212,168,83,${flashAlpha * 0.3})`;
+    X.fillRect(0, 0, W, H);
+  }
+  
+  X.restore();
+}
+
+function drawCactus(x, y, s) {
+  X.fillRect(x-3*s, y-40*s, 6*s, 40*s);
+  X.fillRect(x+3*s, y-30*s, 15*s, 5*s);
+  X.fillRect(x+15*s, y-45*s, 5*s, 20*s);
+  X.fillRect(x-18*s, y-25*s, 15*s, 5*s);
+  X.fillRect(x-18*s, y-38*s, 5*s, 18*s);
+}
+
+// ========== GAME LOGIC ==========
 function startGame() {
-  score = 0; lives = 3; combo = 0; maxCombo = 0; captures = 0; wave = 1;
+  score=0; lives=3; combo=0; maxCombo=0; captures=0; wave=1; villainPower=0.3;
+  floats=[]; particles=[];
   updateHUD();
-  showScreen('game-screen');
-  document.getElementById('title-best').textContent = bestScore > 0 ? `Mejor: ${bestScore}` : '';
-  nextDuel();
+  document.getElementById('tov').classList.add('hidden');
+  document.getElementById('gov').classList.remove('show');
+  document.getElementById('hud').classList.add('show');
+  state = 'title'; // brief pause
+  setTimeout(nextRound, 300);
+}
+
+function nextRound() {
+  document.getElementById('tw').classList.remove('show');
+  state = 'countdown';
+  countdownStep = 0;
+  countdownTimer = 0.7;
+  sfxCountdown();
+}
+
+function winDuel() {
+  state = 'capture'; captureAnim = 0;
+  document.getElementById('tw').classList.remove('show');
+  combo++; if (combo > maxCombo) maxCombo = combo;
+  captures++;
+  const pts = 100 * combo + wave * 25;
+  score += pts;
+  if (captures % 3 === 0) { wave++; villainPower += 0.05; }
+  
+  flashAlpha = 1; shakeDecay = 1;
+  sfxCapture();
+  if (navigator.vibrate) navigator.vibrate([30,40,30]);
+  spawnGold(W*0.78, H*0.55);
+  floats.push({ text: `+${pts}`, x: W/2, y: H*0.45, alpha: 1.2 });
+  updateHUD();
+}
+
+function loseDuel() {
+  state = 'escape'; escapeAnim = 0;
+  document.getElementById('tw').classList.remove('show');
+  lives--; combo = 0;
+  shakeDecay = 1.5;
+  sfxLose();
+  if (navigator.vibrate) navigator.vibrate([80,40,80]);
+  updateHUD();
+}
+
+function gameOver() {
+  state = 'gameover';
+  document.getElementById('hud').classList.remove('show');
+  if (score > bestScore) { bestScore = score; localStorage.setItem('ss_best', String(bestScore)); }
+  document.getElementById('gs').textContent = score;
+  document.getElementById('gc').textContent = captures;
+  document.getElementById('gm').textContent = maxCombo;
+  document.getElementById('gw').textContent = wave;
+  document.getElementById('gb').textContent = score >= bestScore ? 'Nuevo record!' : `Mejor: ${bestScore}`;
+  document.getElementById('gov').classList.add('show');
+  saveScore(); loadLeaderboard();
 }
 
 function updateHUD() {
-  document.getElementById('hud-score').textContent = score;
-  document.getElementById('hud-combo').textContent = combo > 1 ? `COMBO x${combo}` : '';
-  document.getElementById('hud-wave').textContent = `Oleada ${wave}`;
-  let livesHTML = '';
-  for (let i = 0; i < 3; i++) livesHTML += `<span class="hud-life">${i < lives ? '★' : '☆'}</span>`;
-  document.getElementById('hud-lives').innerHTML = livesHTML;
+  document.getElementById('hs').textContent = score;
+  document.getElementById('hc').textContent = combo > 1 ? `COMBO x${combo}` : '';
+  document.getElementById('hw').textContent = `Oleada ${wave}`;
+  let lh = '';
+  for (let i = 0; i < 3; i++) lh += i < lives ? '★' : '☆';
+  document.getElementById('hl').innerHTML = lh;
 }
 
-// ========== DUEL SEQUENCE ==========
-async function nextDuel() {
-  if (lives <= 0) return gameOver();
-  
-  gameActive = false;
-  tugPos = 50;
-  document.getElementById('tug-fill').style.width = '50%';
-  document.getElementById('tug-container').style.display = 'none';
-  document.getElementById('tap-zone').classList.remove('active');
-  
-  const cd = document.getElementById('countdown');
-  
-  // Countdown
-  for (const text of ['3', '2', '1']) {
-    cd.textContent = text;
-    cd.className = 'countdown show';
-    await wait(700);
-    cd.className = 'countdown';
-    await wait(100);
-  }
-  
-  // DRAW!
-  cd.textContent = 'DRAW!';
-  cd.className = 'countdown show draw';
-  
-  // Haptic
-  if (navigator.vibrate) navigator.vibrate(50);
-  
-  await wait(400);
-  cd.className = 'countdown';
-  
-  // Start tug of war
-  document.getElementById('tug-container').style.display = 'block';
-  document.getElementById('tap-zone').classList.add('active');
-  gameActive = true;
-  
-  // Villain auto-push
-  const vType = VILLAINS[Math.min(Math.floor((wave - 1) / 3), VILLAINS.length - 1)];
-  const vSpeed = vType.speed + (wave * 0.05);
-  
-  villainInterval = setInterval(() => {
-    if (!gameActive) return;
-    tugPos -= vSpeed;
-    // Random bursts from villain
-    if (Math.random() < 0.05 * wave) tugPos -= 2;
-    tugPos = Math.max(0, Math.min(100, tugPos));
-    document.getElementById('tug-fill').style.width = tugPos + '%';
-    
-    // Check win/lose
-    if (tugPos <= 5) endDuel(false);
-    if (tugPos >= 95) endDuel(true);
-  }, 30);
-}
-
-// ========== TAP ==========
-document.getElementById('tap-btn').addEventListener('pointerdown', (e) => {
+// ========== INPUT ==========
+document.getElementById('tbtn').addEventListener('pointerdown', e => {
   e.preventDefault();
-  if (!gameActive) return;
-  
-  tugPos += 3 + (combo * 0.2);
+  if (state !== 'duel') return;
+  AC.resume();
+  tugPos += 2.8 + combo * 0.15;
   tugPos = Math.min(100, tugPos);
-  document.getElementById('tug-fill').style.width = tugPos + '%';
-  
-  // Screen shake on fast taps
-  document.getElementById('arena').classList.add('shake');
-  setTimeout(() => document.getElementById('arena').classList.remove('shake'), 100);
-  
-  // Haptic
-  if (navigator.vibrate) navigator.vibrate(10);
+  shakeDecay = Math.max(shakeDecay, 0.15);
+  sfxTap();
+  if (navigator.vibrate) navigator.vibrate(8);
+  spawnDust(W*0.22, H*0.71, 2);
 });
 
-// Also support touch anywhere in tap zone
-document.getElementById('tap-zone').addEventListener('pointerdown', (e) => {
-  if (e.target === document.getElementById('tap-zone')) {
-    if (!gameActive) return;
-    tugPos += 2;
-    tugPos = Math.min(100, tugPos);
-    document.getElementById('tug-fill').style.width = tugPos + '%';
-  }
-});
-
-// ========== END DUEL ==========
-function endDuel(won) {
-  gameActive = false;
-  clearInterval(villainInterval);
-  
-  if (won) {
-    // CAPTURED!
-    combo++;
-    if (combo > maxCombo) maxCombo = combo;
-    captures++;
-    const pts = 100 * combo + (wave * 25);
-    score += pts;
-    
-    // Flash
-    const flash = document.getElementById('capture-flash');
-    flash.classList.add('active');
-    setTimeout(() => flash.classList.remove('active'), 200);
-    
-    // Float score
-    const float = document.createElement('div');
-    float.className = 'float-score';
-    float.textContent = `+${pts}`;
-    float.style.left = '50%';
-    float.style.top = '40%';
-    document.getElementById('arena').appendChild(float);
-    setTimeout(() => float.remove(), 1000);
-    
-    // Haptic
-    if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
-    
-    // Next wave every 3 captures
-    if (captures % 3 === 0) wave++;
-    
-    updateHUD();
-    setTimeout(nextDuel, 800);
-  } else {
-    // ESCAPED
-    lives--;
-    combo = 0;
-    
-    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-    
-    updateHUD();
-    
-    if (lives <= 0) {
-      setTimeout(gameOver, 600);
-    } else {
-      setTimeout(nextDuel, 1000);
-    }
-  }
-}
-
-// ========== GAME OVER ==========
-function gameOver() {
-  if (score > bestScore) {
-    bestScore = score;
-    localStorage.setItem('ss_best', String(bestScore));
-  }
-  
-  document.getElementById('go-score').textContent = score;
-  document.getElementById('go-captures').textContent = captures;
-  document.getElementById('go-max-combo').textContent = maxCombo;
-  document.getElementById('go-wave').textContent = wave;
-  document.getElementById('go-best').textContent = score >= bestScore ? '¡Nuevo record!' : `Mejor: ${bestScore}`;
-  
-  // Save to Supabase
-  if (DB_READY) saveScore();
-  
-  // Load leaderboard
-  loadLeaderboard();
-  
-  showScreen('gameover-screen');
-}
+document.getElementById('tplay').addEventListener('pointerdown', () => { AC.resume(); startGame(); });
 
 // ========== SUPABASE ==========
 async function saveScore() {
-  const name = localStorage.getItem('ss_name') || 'Anonimo';
   try {
-    await fetch(`${SUPABASE_URL}/rest/v1/scores`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`
-      },
-      body: JSON.stringify({ name, score, captures, max_combo: maxCombo, wave })
+    await fetch(`${SB_URL}/rest/v1/scores`, {
+      method:'POST', headers:{'Content-Type':'application/json','apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`},
+      body: JSON.stringify({name:localStorage.getItem('ss_name')||'Anonimo',score,captures,max_combo:maxCombo,wave})
     });
-  } catch(e) { console.error(e); }
+  } catch(e) {}
 }
-
 async function loadLeaderboard() {
-  const container = document.getElementById('leaderboard');
-  if (!DB_READY) {
-    container.innerHTML = '';
-    return;
-  }
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/scores?select=name,score&order=score.desc&limit=5`, {
-      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
-    });
-    const data = await res.json();
-    container.innerHTML = `<div class="lb-title">Top Sheriffs</div>` +
-      data.map((d, i) => `<div class="lb-row"><span class="lb-rank">${i + 1}</span><span class="lb-name">${d.name}</span><span class="lb-pts">${d.score}</span></div>`).join('');
-  } catch(e) { container.innerHTML = ''; }
+    const r = await fetch(`${SB_URL}/rest/v1/scores?select=name,score&order=score.desc&limit=5`,
+      {headers:{'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`}});
+    const d = await r.json();
+    document.getElementById('lb').innerHTML = `<div class="lb-t">Top Sheriffs</div>` +
+      d.map((e,i) => `<div class="lb-r"><span class="lb-rk">${i+1}</span><span class="lb-n">${e.name}</span><span class="lb-p">${e.score}</span></div>`).join('');
+  } catch(e) {}
 }
 
-// ========== SHARE ==========
 function shareScore() {
-  const text = `🤠 Sheriff Showdown — ${score} pts, ${captures} capturas, Oleada ${wave}. ¿Puedes ganarme?`;
-  if (navigator.share) {
-    navigator.share({ title: 'Sheriff Showdown', text, url: location.href });
-  } else {
-    const waUrl = `https://wa.me/?text=${encodeURIComponent(text + ' ' + location.href)}`;
-    window.open(waUrl, '_blank');
-  }
+  const t = `🤠 Sheriff Showdown — ${score} pts, ${captures} capturas. ¿Puedes ganarme?`;
+  if (navigator.share) navigator.share({title:'Sheriff Showdown',text:t,url:location.href});
+  else window.open(`https://wa.me/?text=${encodeURIComponent(t+' '+location.href)}`, '_blank');
 }
 
-// ========== UTILS ==========
-function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
-
-// Init
-document.getElementById('title-best').textContent = bestScore > 0 ? `Mejor: ${bestScore}` : '';
+// ========== INIT ==========
+document.getElementById('tbest').textContent = bestScore > 0 ? `Mejor: ${bestScore}` : '';
+requestAnimationFrame(loop);
 </script>
 </body>
 </html>
